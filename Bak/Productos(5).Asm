@@ -52,18 +52,22 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 				.break .if eax == 0 || nBytesEscritos == 0
 					mov esi, offset bufferLectura
 					mov ecx, nBytesEscritos
-					.repeat
-						cmp byte ptr [esi], 13
-						je .found
-						inc esi
-						loop .repeat
-						jmp .next
-						
-						.found:
-							mov byte ptr [esi],0
-						
-						.next:
-							invoke SendDlgItemMessage, hWin, IDC_LISTA,  LB_ADDSTRING, 0, addr bufferLectura
+					buscar_salto:
+				        cmp ecx, 0
+				        je fin_busqueda
+				
+				        cmp byte ptr [esi], 13
+				        je encontrado
+				
+				        inc esi
+				        dec ecx
+				        jmp buscar_salto
+
+					encontrado:
+					        mov byte ptr [esi], 0
+					
+					fin_busqueda:
+					        invoke SendDlgItemMessage, hWin, IDC_LISTA, LB_ADDSTRING, 0, addr bufferLectura
 				.endif
 			.endw
 			invoke CloseHandle, hArchivo

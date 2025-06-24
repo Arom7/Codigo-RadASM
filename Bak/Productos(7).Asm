@@ -21,6 +21,10 @@ includelib masm32.lib
 	; Datos para generar el archivo de texto
 	archivoNombre db "productos.txt",0
 	nBytesEscritos dd ?
+	
+	; Datos para la lectura del .txt
+	bufferLectura db 128 dup(0)
+	hArchivo dd ?
 .code
 
 start:
@@ -36,9 +40,34 @@ start:
 
 DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 
-	mov		eax,uMsg
+	mov	eax,uMsg
 	.if eax==WM_INITDIALOG
-		mov eax, wParam
+		invoke CreateFileA, addr archivoNombre, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL
+		invoke SetFilePointer, hArchivo, 0, 0, FILE_BEGIN
+		mov hArchivo, eax
+		.if hArchivo != INVALID_HANDLE_VALUE
+			.while TRUE
+				invoke RtlZeroMemory, addr bufferLectura, sizeof bufferLectura
+				invoke ReadFile, hArchivo, addr bufferLectura, sizeof bufferLectura, addr nBytesEscritos, NULL
+				.break .if eax == 0 || nBytesEscritos == 0
+					mov esi, offset bufferLectura
+					mov ecx, nBytesEscritos
+					.repeat
+						cmp byte ptr [esi], 13
+						je .found
+						inc esi
+						loop .repeat
+						jmp .next
+						
+						.found:
+							mov byte ptr [esi],0
+						
+						.next:
+							invoke SendDlgItemMessage, hWin, IDC_LISTA,  LB_ADDSTRING, 0, addr bufferLectura
+				.endif
+			.endw
+			invoke CloseHandle, hArchivo
+		.endif
 	.elseif eax==WM_COMMAND
 		mov eax, wParam
 		and eax, 0FFFFh
@@ -59,7 +88,9 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 			mov ebx, eax
 			.if ebx != INVALID_HANDLE_VALUE
 				invoke SetFilePointer, ebx, 0, 0, 2
-				invoke WriteFile, ebx, addr bufferLinea,  lstrlen(addr bufferLinea), addr nBytesEscritos, NULL
+				invoke lstrlen, addr bufferLinea
+				mov ecx, eax
+				invoke WriteFile, ebx, addr bufferLinea, ecx , addr nBytesEscritos, NULL
 				invoke WriteFile, ebx, addr saltoLinea, 2, addr nBytesEscritos, NULL
 				
 				invoke CloseHandle,ebx

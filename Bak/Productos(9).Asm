@@ -13,6 +13,7 @@ includelib masm32.lib
 	varDescripcion db 100 dup(0)
 	bufferLinea   db 100 dup(0)
     szFormato     db "%s - Bs.%s - Stock: %s", 0
+    saltoLinea	  db 13,10
 
 	; Datos para realizar testeo
 	szTest db "!Click en Registrar",0
@@ -58,8 +59,8 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 			mov ebx, eax
 			.if ebx != INVALID_HANDLE_VALUE
 				invoke SetFilePointer, ebx, 0, 0, 2
-				invoke WriteFile, ebx, addr bufferLinea, lstrlen(addr bufferLinea), addr nBytesEscritos, NULL
-				invoke WriteFile, ebx, chr$(13,10), 2, addr nBytesEscritos, NULL
+				invoke WriteFile, ebx, addr bufferLinea,  lstrlen(addr bufferLinea), addr nBytesEscritos, NULL
+				invoke WriteFile, ebx, addr saltoLinea, 2, addr nBytesEscritos, NULL
 				
 				invoke CloseHandle,ebx
 			.endif

@@ -59,7 +59,9 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 			mov ebx, eax
 			.if ebx != INVALID_HANDLE_VALUE
 				invoke SetFilePointer, ebx, 0, 0, 2
-				invoke WriteFile, ebx, addr bufferLinea, lstrlen(addr bufferLinea), addr nBytesEscritos, NULL
+				invoke lstrlen, addr bufferLinea
+				mov ecx, eax
+				invoke WriteFile, ebx, addr bufferLinea, ecx , addr nBytesEscritos, NULL
 				invoke WriteFile, ebx, addr saltoLinea, 2, addr nBytesEscritos, NULL
 				
 				invoke CloseHandle,ebx

@@ -49,26 +49,27 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 			.while TRUE
 				invoke RtlZeroMemory, addr bufferLectura, sizeof bufferLectura
 				invoke ReadFile, hArchivo, addr bufferLectura, sizeof bufferLectura, addr nBytesEscritos, NULL
-				.break .if eax == 0 || nBytesEscritos == 0
-					mov esi, offset bufferLectura
-					mov ecx, nBytesEscritos
-					buscar_salto:
-				        cmp ecx, 0
-				        je fin_busqueda
+				.if eax == 0 || nBytesEscritos == 0
+            		.break
+        		.endif
+				mov esi, offset bufferLectura
+				mov ecx, nBytesEscritos
+				buscar_salto:
+				    cmp ecx, 0
+				    je fin_busqueda
 				
-				        cmp byte ptr [esi], 13   ; Salto de línea (\r)
-				        je encontrado
+				    cmp byte ptr [esi], 13
+				    je encontrado
 				
-				        inc esi
-				        dec ecx
-				        jmp buscar_salto
+				    inc esi
+				    dec ecx
+				    jmp buscar_salto
 
-					encontrado:
-					        mov byte ptr [esi], 0
+				encontrado:
+					mov byte ptr [esi], 0
 					
-					fin_busqueda:
-					        invoke SendDlgItemMessage, hWin, IDC_LISTA, LB_ADDSTRING, 0, addr bufferLectura
-				.endif
+				fin_busqueda:
+					invoke SendDlgItemMessage, hWin, IDC_LISTA, LB_ADDSTRING, 0, addr bufferLectura
 			.endw
 			invoke CloseHandle, hArchivo
 		.endif

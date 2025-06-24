@@ -42,33 +42,34 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 
 	mov	eax,uMsg
 	.if eax==WM_INITDIALOG
-		invoke CreateFileA, addr archivoNombre, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL
-		invoke SetFilePointer, hArchivo, 0, 0, FILE_BEGIN
+		invoke CreateFileA, addr archivoNombre, FILE_APPEND_DATA, 0, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL
 		mov hArchivo, eax
 		.if hArchivo != INVALID_HANDLE_VALUE
 			.while TRUE
 				invoke RtlZeroMemory, addr bufferLectura, sizeof bufferLectura
 				invoke ReadFile, hArchivo, addr bufferLectura, sizeof bufferLectura, addr nBytesEscritos, NULL
 				.break .if eax == 0 || nBytesEscritos == 0
-					mov esi, offset bufferLectura
-					mov ecx, nBytesEscritos
-					buscar_salto:
-				        cmp ecx, 0
-				        je fin_busqueda
-				
-				        cmp byte ptr [esi], 13
-				        je encontrado
-				
-				        inc esi
-				        dec ecx
-				        jmp buscar_salto
 
-					encontrado:
-					        mov byte ptr [esi], 0
-					
-					fin_busqueda:
-					        invoke SendDlgItemMessage, hWin, IDC_LISTA, LB_ADDSTRING, 0, addr bufferLectura
-				.endif
+				; Recorre el buffer hasta encontrar salto de línea
+				mov esi, offset bufferLectura
+				mov ecx, nBytesEscritos
+
+				buscar_salto:
+					cmp ecx, 0
+					je fin_busqueda
+
+					cmp byte ptr [esi], 13
+					je encontrado
+
+					inc esi
+					dec ecx
+					jmp buscar_salto
+	
+				encontrado:
+					mov byte ptr [esi], 0  ; Terminar la línea
+	
+				fin_busqueda:
+					invoke SendDlgItemMessage, hWin, IDC_LISTA, LB_ADDSTRING, 0, addr bufferLectura
 			.endw
 			invoke CloseHandle, hArchivo
 		.endif

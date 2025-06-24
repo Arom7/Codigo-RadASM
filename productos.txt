@@ -1,0 +1,4 @@
+Nuevo Producto - Bs.7 - Stock: 10
+Coca Cola - Bs.7 - Stock: 10
+No hay registro - Bs.22 - Stock: 10
+Ahora si registra - Bs.22 - Stock: 10

@@ -2,3 +2,9 @@ Nuevo Producto - Bs.7 - Stock: 10
 Coca Cola - Bs.7 - Stock: 10
 No hay registro - Bs.22 - Stock: 10
 Ahora si registra - Bs.22 - Stock: 10
+pan - Bs.2 - Stock: 20
+Leche - Bs.10 - Stock: 2
+arroz - Bs.20 - Stock: 10
+fanta - Bs.10 - Stock: 300
+pescado - Bs.80 - Stock: 14
+huevo - Bs.2 - Stock: 300

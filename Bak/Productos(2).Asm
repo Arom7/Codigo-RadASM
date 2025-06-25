@@ -14,6 +14,17 @@ includelib masm32.lib
 	bufferLinea   db 100 dup(0)
     szFormato     db "%s - Bs.%s - Stock: %s", 0
     saltoLinea	  db 13,10
+    szErrorArchivo  db "No se pudo abrir el archivo", 0
+	szTituloError   db "Error", 0
+	szNoEncontrado db "Producto no encontrado", 0
+	szAviso        db "Aviso", 0
+	szTextoIngresado db "Texto que ingresaste", 0
+	szLineaLeida db "Línea leída", 0
+	szBuscando   db "Buscando", 0
+
+
+
+
 
 	; Datos para realizar testeo
 	szTest db "!Click en Registrar",0
@@ -42,42 +53,42 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 
 	mov	eax,uMsg
 	.if eax==WM_INITDIALOG
-		invoke CreateFileA, addr archivoNombre, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL
-		mov hArchivo, eax
-		.if hArchivo != INVALID_HANDLE_VALUE
-			.while TRUE
-				invoke RtlZeroMemory, addr bufferLectura, sizeof bufferLectura
-				invoke ReadFile, hArchivo, addr bufferLectura, sizeof bufferLectura, addr nBytesEscritos, NULL
-				.break .if eax == 0 || nBytesEscritos == 0
+		 invoke CreateFileA, addr archivoNombre, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL
+        mov hArchivo, eax
+        .if hArchivo != INVALID_HANDLE_VALUE
+            .while TRUE
+                invoke RtlZeroMemory, addr bufferLectura, sizeof bufferLectura
+                invoke ReadFile, hArchivo, addr bufferLectura, sizeof bufferLectura, addr nBytesEscritos, NULL
+                .break .if eax == 0 || nBytesEscritos == 0
 
-				; Recorre el buffer hasta encontrar salto de línea
-				mov esi, offset bufferLectura
-				mov ecx, nBytesEscritos
+                mov esi, offset bufferLectura
 
-				buscar_salto:
-					cmp ecx, 0
-					je fin_busqueda
-
-					cmp byte ptr [esi], 13
-					je encontrado
-
-					inc esi
-					dec ecx
-					jmp buscar_salto
-	
-				encontrado:
-					mov byte ptr [esi], 0  ; Terminar la línea
-	
-				fin_busqueda:
-					invoke SendDlgItemMessage, hWin, IDC_LISTA, LB_ADDSTRING, 0, addr bufferLectura
-			.endw
-			invoke CloseHandle, hArchivo
-		.endif
+				repetir_linea:
+				    mov edi, esi
+				
+				buscar_fin:
+				    cmp byte ptr [edi], 13
+				    je fin_linea
+				    cmp byte ptr [edi], 0
+				    je fin_todo
+				    inc edi
+				    jmp buscar_fin
+				
+				fin_linea:
+				    mov byte ptr [edi], 0
+				    invoke SendDlgItemMessage, hWin, IDC_LISTA, LB_ADDSTRING, 0, esi
+				    add edi, 2
+				    mov esi, edi
+				    jmp repetir_linea
+				
+				fin_todo:
+				    .endw
+				    invoke CloseHandle, hArchivo
+        .endif
 	.elseif eax==WM_COMMAND
 		mov eax, wParam
 		and eax, 0FFFFh
 		.if ax == IDC_REGISTRAR 
-			; La otra linea era para realizar un test al boton y su funcionamiento
 			invoke MessageBox, NULL, addr szTest, addr szTest, MB_OK
 			invoke GetDlgItemText, hWin, IDC_NOMBRE, addr varNombre, sizeof varNombre
 			invoke GetDlgItemText, hWin, IDC_PRECIO, addr varPrecio, sizeof varPrecio
@@ -102,6 +113,105 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 			.endif
 			
 			invoke MessageBox, hWin, addr bufferLinea, addr szTest, MB_OK
+			
+			
+			
+			
+			
+			.elseif ax == IDC_BUSCAR
+
+    		; Leer el nombre que el usuario quiere buscar
+   	 		invoke GetDlgItemText, hWin, IDC_BUSCAR_NOMBRE, addr varNombre, sizeof varNombre
+
+    		; Abrir el archivo en modo lectura
+    		invoke CreateFileA, addr archivoNombre, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL
+    		mov hArchivo, eax
+    		.if hArchivo != INVALID_HANDLE_VALUE
+        		.while TRUE
+            		invoke RtlZeroMemory, addr bufferLectura, sizeof bufferLectura
+            		invoke ReadFile, hArchivo, addr bufferLectura, sizeof bufferLectura, addr nBytesEscritos, NULL
+            		.break .if eax == 0 || nBytesEscritos == 0
+
+            		mov esi, offset bufferLectura
+
+        		buscar_linea:
+            		mov edi, esi
+
+        		buscar_fin_linea:
+            		cmp byte ptr [edi], 13 ; fin de línea CR
+            		je fin_linea_buscar
+            		cmp byte ptr [edi], 0  ; fin de buffer
+            		je fin_todo_buscar
+            		inc edi
+            		jmp buscar_fin_linea
+
+        		fin_linea_buscar:
+            		mov byte ptr [edi], 0 ; cortar línea para tratar como cadena
+
+            		; Buscar el guion '-' para separar el nombre
+            		mov esi, offset bufferLectura
+            		mov edi, esi
+
+        		buscar_guion:
+            		cmp byte ptr [edi], '-'
+            		je encontrado_guion
+            		cmp byte ptr [edi], 0
+            		je no_encontrado_guion
+            		inc edi
+            		jmp buscar_guion
+
+        		encontrado_guion:
+            		; Cortar cadena en el espacio antes del guion
+            		; Asumiendo que formato es "Nombre - Bs.7 - Stock: 10"
+            		; Aquí retrocedemos 1 para eliminar espacio antes del guion
+            		mov byte ptr [edi - 1], 0
+
+            		; Ahora la cadena bufferLectura termina justo después del nombre
+
+            		; Comparar con varNombre
+
+            		invoke lstrlen, addr varNombre
+            		mov ecx, eax
+           			mov esi, offset bufferLectura
+            		mov edi, offset varNombre
+            		push ecx
+            		repe cmpsb
+            		pop ecx
+            		.if ZERO?
+                		; coincidencia encontrada
+                		invoke MessageBox, hWin, offset bufferLectura, addr szTest, MB_OK
+                		jmp cerrar_archivo_buscar
+            		.endif
+
+            		jmp siguiente_linea
+
+        		no_encontrado_guion:
+            		; No encontró guion, ignorar línea o comparar toda
+            		jmp siguiente_linea
+
+        		siguiente_linea:
+            		; Saltar a siguiente línea dentro del buffer
+            		add edi, 2 ; saltar CR LF
+            		mov esi, edi
+            		jmp buscar_linea
+
+        		fin_todo_buscar:
+        		.endw
+
+        		cerrar_archivo_buscar:
+        		invoke CloseHandle, hArchivo
+    		.else
+        		invoke MessageBox, hWin, addr szErrorArchivo, addr szTituloError, MB_OK
+    		.endif
+
+
+
+
+
+
+
+                
+
 		
 		.elseif ax == IDCANCEL
 			invoke EndDialog, hWin, 0

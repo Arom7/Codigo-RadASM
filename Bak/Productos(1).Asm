@@ -21,10 +21,11 @@ includelib masm32.lib
 	szTextoIngresado db "Texto que ingresaste", 0
 	szLineaLeida db "Línea leída", 0
 	szBuscando   db "Buscando", 0
+	totalPagar     dd 0
+	bufferPrecio   db 16 dup(0)
+	bufferTotal    db 32 dup(0)
 
-
-
-
+	
 
 	; Datos para realizar testeo
 	szTest db "!Click en Registrar",0
@@ -115,84 +116,146 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 			invoke MessageBox, hWin, addr bufferLinea, addr szTest, MB_OK
 			
 			
-			
-			
-			
 			.elseif ax == IDC_BUSCAR
 
-    ; Leer el nombre que el usuario quiere buscar
-    invoke GetDlgItemText, hWin, IDC_BUSCAR_NOMBRE, addr varNombre, sizeof varNombre
+    			; Leer el nombre que el usuario quiere buscar
+    			invoke GetDlgItemText, hWin, IDC_BUSCAR_NOMBRE, addr varNombre, sizeof varNombre
 
-    ; Abrir archivo
-    invoke CreateFileA, addr archivoNombre, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL
-    mov hArchivo, eax
-    .if hArchivo != INVALID_HANDLE_VALUE
-        .while TRUE
-            ; Leer línea por línea
-            invoke RtlZeroMemory, addr bufferLectura, sizeof bufferLectura
-            invoke ReadFile, hArchivo, addr bufferLectura, sizeof bufferLectura, addr nBytesEscritos, NULL
-            .break .if eax == 0 || nBytesEscritos == 0
+    			; Abrir archivo
+    			invoke CreateFileA, addr archivoNombre, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL
+    			mov hArchivo, eax
+    			.if hArchivo != INVALID_HANDLE_VALUE
+        			.while TRUE
+            			; Leer línea por línea
+            			invoke RtlZeroMemory, addr bufferLectura, sizeof bufferLectura
+            			invoke ReadFile, hArchivo, addr bufferLectura, sizeof bufferLectura, addr nBytesEscritos, NULL
+            			.break .if eax == 0 || nBytesEscritos == 0
 
-            mov esi, offset bufferLectura
+            			mov esi, offset bufferLectura
 
-        buscar_linea:
-            mov edi, esi
+        			buscar_linea:
+            			mov edi, esi
 
-        buscar_fin_linea:
-            cmp byte ptr [edi], 13
-            je cortar_linea
-            cmp byte ptr [edi], 0
-            je fin_todo_buscar
-            inc edi
-            jmp buscar_fin_linea
+        			buscar_fin_linea:
+            			cmp byte ptr [edi], 13
+            			je cortar_linea
+            			cmp byte ptr [edi], 0
+            			je fin_todo_buscar
+            			inc edi
+            			jmp buscar_fin_linea
 
-        cortar_linea:
-            mov byte ptr [edi], 0 ; termina línea
-            ; Extraer nombre antes del " - "
-            mov ebx, esi
-        buscar_guion:
-            cmp byte ptr [ebx], '-'
-            je cortar_nombre
-            cmp byte ptr [ebx], 0
-            je continuar
-            inc ebx
-            jmp buscar_guion
+        			cortar_linea:
+            			mov byte ptr [edi], 0 ; termina línea
+            			; Extraer nombre antes del " - "
+            			mov ebx, esi
+        			buscar_guion:
+            			cmp byte ptr [ebx], '-'
+            			je cortar_nombre
+            			cmp byte ptr [ebx], 0
+            			je continuar
+            			inc ebx
+            			jmp buscar_guion
 
-        cortar_nombre:
-            mov byte ptr [ebx - 1], 0 ; termina nombre antes del guion
+        			cortar_nombre:
+            			mov byte ptr [ebx - 1], 0 ; termina nombre antes del guion
 
-            ; Comparar nombre extraído con varNombre
-            invoke lstrcmpiA, esi, addr varNombre
-            .if eax == 0
-                ; Coincidencia, mostrar línea completa
-                ; (ponemos el guion de nuevo para ver la línea completa)
-                mov byte ptr [ebx - 1], ' '
-                invoke MessageBox, hWin, esi, addr szTest, MB_OK
-                jmp cerrar_archivo_buscar
-            .endif
+            			; Comparar nombre extraído con varNombre
+            			invoke lstrcmpiA, esi, addr varNombre
+            			.if eax == 0
+                			; Coincidencia, mostrar línea completa
+                			; (ponemos el guion de nuevo para ver la línea completa)
+                			mov byte ptr [ebx - 1], ' '
+                			invoke MessageBox, hWin, esi, addr szTest, MB_OK
+                			jmp cerrar_archivo_buscar
+            			.endif
 
-        continuar:
-            add edi, 2
-            mov esi, edi
-            jmp buscar_linea
+        			continuar:
+            			add edi, 2
+            			mov esi, edi
+            			jmp buscar_linea
 
-        fin_todo_buscar:
-        .endw
+        			fin_todo_buscar:
+        			.endw
 
-        ; No se encontró
-        invoke MessageBox, hWin, addr szNoEncontrado, addr szAviso, MB_OK
+        			; No se encontró
+        			invoke MessageBox, hWin, addr szNoEncontrado, addr szAviso, MB_OK
 
-        cerrar_archivo_buscar:
-        invoke CloseHandle, hArchivo
-    .else
-        invoke MessageBox, hWin, addr szErrorArchivo, addr szTituloError, MB_OK
-    .endif
+        			cerrar_archivo_buscar:
+        			invoke CloseHandle, hArchivo
+    			.else
+        			invoke MessageBox, hWin, addr szErrorArchivo, addr szTituloError, MB_OK
+    			.endif
+    			
+    			
+    			
+    			
+    			
+    			
+    						.elseif ax == IDC_AGREGAR
 
+    ; Obtener índice del producto seleccionado en la lista principal
+    invoke SendDlgItemMessage, hWin, IDC_LISTA, LB_GETCURSEL, 0, 0
+    cmp eax, LB_ERR
+    je salir_agregar
 
+    mov ecx, eax ; guardar índice
+    ; Obtener texto de la línea seleccionada
+    invoke SendDlgItemMessage, hWin, IDC_LISTA, LB_GETTEXT, ecx, addr bufferLinea
 
+    ; Extraer precio desde el texto " - Bs."
+    mov esi, offset bufferLinea
+buscar_bs:
+    cmp byte ptr [esi], 0
+    je salir_agregar
+    cmp byte ptr [esi], 'B'
+    jne siguiente
+    cmp byte ptr [esi+1], 's'
+    jne siguiente
+    cmp byte ptr [esi+2], '.'
+    jne siguiente
+    add esi, 3 ; saltar "Bs."
+    jmp extraer_precio
+siguiente:
+    inc esi
+    jmp buscar_bs
 
-                
+extraer_precio:
+    mov edi, offset bufferPrecio
+    xor ecx, ecx
+extraer_loop:
+    mov al, [esi]
+    cmp al, '0'
+    jb terminar_precio
+    cmp al, '9'
+    ja terminar_precio
+    mov [edi], al
+    inc edi
+    inc esi
+    inc ecx
+    jmp extraer_loop
 
+terminar_precio:
+    mov byte ptr [edi], 0
+
+    ; Convertir texto a número
+    invoke atodw, addr bufferPrecio
+    add totalPagar, eax
+
+    ; Mostrar total actualizado
+    invoke dwtoa, totalPagar, addr bufferTotal
+    invoke SetDlgItemText, hWin, IDC_TOTAL, addr bufferTotal
+
+    ; Agregar al carrito
+    invoke SendDlgItemMessage, hWin, IDC_CARRITO, LB_ADDSTRING, 0, addr bufferLinea
+
+salir_agregar:
+
+    			
+    			
+    			
+    			
+    			
+    			
 		
 		.elseif ax == IDCANCEL
 			invoke EndDialog, hWin, 0

@@ -8,3 +8,4 @@ arroz - Bs.20 - Stock: 10
 fanta - Bs.10 - Stock: 300
 pescado - Bs.80 - Stock: 14
 huevo - Bs.2 - Stock: 300
+mantequilla - Bs.20 - Stock: 10

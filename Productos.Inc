@@ -29,6 +29,9 @@ IDC_REGISTRAR 		equ 1010; ID del boton para el registro
 IDC_LISTA			equ 1011; ID de la ListBox para mostrar los productos
 IDC_BUSCAR          equ 1012 ; ID del botón Buscar
 IDC_BUSCAR_NOMBRE   equ 1013 ; ID del campo de texto para buscar nombre
+IDC_AGREGAR         equ 1014
+IDC_CARRITO         equ 1015
+IDC_TOTAL           equ 1016
 
 ;#########################################################################
 

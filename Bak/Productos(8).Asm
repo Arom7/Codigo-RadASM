@@ -120,65 +120,97 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
 			
 			.elseif ax == IDC_BUSCAR
 
-            ; Leer el nombre que el usuario quiere buscar
-            invoke GetDlgItemText, hWin, IDC_BUSCAR_NOMBRE, addr varNombre, sizeof varNombre
+    		; Leer el nombre que el usuario quiere buscar
+   	 		invoke GetDlgItemText, hWin, IDC_BUSCAR_NOMBRE, addr varNombre, sizeof varNombre
 
-            ; Abrir el archivo en modo lectura
-            invoke CreateFileA, addr archivoNombre, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL
-            mov hArchivo, eax
-            .if hArchivo != INVALID_HANDLE_VALUE
-                .while TRUE
-                    invoke RtlZeroMemory, addr bufferLectura, sizeof bufferLectura
-                    invoke ReadFile, hArchivo, addr bufferLectura, sizeof bufferLectura, addr nBytesEscritos, NULL
-                    .break .if eax == 0 || nBytesEscritos == 0
+    		; Abrir el archivo en modo lectura
+    		invoke CreateFileA, addr archivoNombre, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL
+    		mov hArchivo, eax
+    		.if hArchivo != INVALID_HANDLE_VALUE
+        		.while TRUE
+            		invoke RtlZeroMemory, addr bufferLectura, sizeof bufferLectura
+            		invoke ReadFile, hArchivo, addr bufferLectura, sizeof bufferLectura, addr nBytesEscritos, NULL
+            		.break .if eax == 0 || nBytesEscritos == 0
 
-                    mov esi, offset bufferLectura
+            		mov esi, offset bufferLectura
 
-                buscar_linea:
-                    mov edi, esi
+        		buscar_linea:
+            		mov edi, esi
 
-                buscar_fin_buscar:
-                    cmp byte ptr [edi], 13
-                    je fin_linea_buscar
-                    cmp byte ptr [edi], 0
-                    je fin_todo_buscar
-                    inc edi
-                    jmp buscar_fin_buscar
+        		buscar_fin_linea:
+            		cmp byte ptr [edi], 13 ; fin de línea CR
+            		je fin_linea_buscar
+            		cmp byte ptr [edi], 0  ; fin de buffer
+            		je fin_todo_buscar
+            		inc edi
+            		jmp buscar_fin_linea
 
-                fin_linea_buscar:
-                    mov byte ptr [edi], 0 ; cortar línea
-                    ; comparar el nombre buscado con el inicio de la línea
-                   	invoke MessageBox, hWin, esi, addr szLineaLeida, MB_OK
-					invoke MessageBox, hWin, addr varNombre, addr szBuscando, MB_OK
-			
+        		fin_linea_buscar:
+            		mov byte ptr [edi], 0 ; cortar línea para tratar como cadena
 
-                    invoke lstrlen, addr varNombre
-                    mov ecx, eax
-                    mov esi, offset bufferLectura
-                    mov edi, offset varNombre
-                    push ecx
-                    repe cmpsb
-                    pop ecx
-                    .if ZERO?
-                        ; nombre coincide, mostrar en messagebox
-                        invoke MessageBox, hWin, offset bufferLectura, addr szTest, MB_OK
-                        jmp cerrar_archivo
-                    .endif
-                    add edi, 2
-                    mov esi, edi
-                    jmp buscar_linea
+            		; Buscar el guion '-' para separar el nombre
+            		mov esi, offset bufferLectura
+            		mov edi, esi
 
-                fin_todo_buscar:
-                .endw
-                ;invoke MessageBox, hWin, addr varNombre, addr szTextoIngresado, MB_OK
+        		buscar_guion:
+            		cmp byte ptr [edi], '-'
+            		je encontrado_guion
+            		cmp byte ptr [edi], 0
+            		je no_encontrado_guion
+            		inc edi
+            		jmp buscar_guion
+
+        		encontrado_guion:
+            		; Cortar cadena en el espacio antes del guion
+            		; Asumiendo que formato es "Nombre - Bs.7 - Stock: 10"
+            		; Aquí retrocedemos 1 para eliminar espacio antes del guion
+            		mov byte ptr [edi - 1], 0
+
+            		; Ahora la cadena bufferLectura termina justo después del nombre
+
+            		; Comparar con varNombre
+
+            		invoke lstrlen, addr varNombre
+            		mov ecx, eax
+           			mov esi, offset bufferLectura
+            		mov edi, offset varNombre
+            		push ecx
+            		repe cmpsb
+            		pop ecx
+            		.if ZERO?
+                		; coincidencia encontrada
+                		invoke MessageBox, hWin, offset bufferLectura, addr szTest, MB_OK
+                		jmp cerrar_archivo_buscar
+            		.endif
+
+            		jmp siguiente_linea
+
+        		no_encontrado_guion:
+            		; No encontró guion, ignorar línea o comparar toda
+            		jmp siguiente_linea
+
+        		siguiente_linea:
+            		; Saltar a siguiente línea dentro del buffer
+            		add edi, 2 ; saltar CR LF
+            		mov esi, edi
+            		jmp buscar_linea
+
+        		fin_todo_buscar:
+        		.endw
+
+        		cerrar_archivo_buscar:
+        		invoke CloseHandle, hArchivo
+    		.else
+        		invoke MessageBox, hWin, addr szErrorArchivo, addr szTituloError, MB_OK
+    		.endif
 
 
 
-                cerrar_archivo:
-                invoke CloseHandle, hArchivo
-            .else
-                invoke MessageBox, hWin, addr szErrorArchivo, addr szTituloError, MB_OK
-            .endif
+
+
+
+
+                
 
 		
 		.elseif ax == IDCANCEL

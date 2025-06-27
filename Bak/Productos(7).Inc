@@ -11,8 +11,7 @@ includelib Comctl32.lib
 includelib shell32.lib
 
 ; Librerias nuevas incluidas por si hay error
-include masm32.inc
-include masm32.lib
+
 
 DlgProc			PROTO	:HWND,:UINT,:WPARAM,:LPARAM
 

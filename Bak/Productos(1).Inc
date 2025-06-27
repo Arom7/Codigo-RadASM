@@ -27,8 +27,8 @@ IDC_STOCK			equ 1006; ID del EditText del stock o la cantidad del producto
 IDC_DESCRIPCION		equ 1009; ID del EditText de la descripcion del producto
 IDC_REGISTRAR 		equ 1010; ID del boton para el registro
 IDC_LISTA			equ 1011; ID de la ListBox para mostrar los productos
-IDC_BUSCAR          equ 1014 ; ID del botón Buscar
-IDC_BUSCAR_NOMBRE   equ 1012 ; ID del campo de texto para buscar nombre
+IDC_BUSCAR          equ 1012 ; ID del botón Buscar
+IDC_BUSCAR_NOMBRE   equ 1013 ; ID del campo de texto para buscar nombre
 
 ;#########################################################################
 

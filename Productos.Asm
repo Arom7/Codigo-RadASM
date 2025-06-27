@@ -20,8 +20,11 @@ includelib masm32.lib
 	szAviso        db "Aviso", 0
 	szTextoIngresado db "Texto que ingresaste", 0
 	szLineaLeida db "Línea leída", 0
-	szBuscando   db "Buscando", 
-	
+	szBuscando   db "Buscando", 0
+	totalPagar     dd 0
+	bufferPrecio   db 16 dup(0)
+	bufferTotal    db 32 dup(0)
+
 
 	; Datos para realizar testeo
 	szTest db "!Click en Registrar",0
@@ -181,6 +184,70 @@ DlgProc proc hWin:HWND,uMsg:UINT,wParam:WPARAM,lParam:LPARAM
     			.else
         			invoke MessageBox, hWin, addr szErrorArchivo, addr szTituloError, MB_OK
     			.endif
+    			
+    			
+    			
+    			
+    			
+    			
+    		.elseif ax == IDC_AGREGAR
+
+    			; Obtener índice del producto seleccionado en la lista principal
+    			invoke SendDlgItemMessage, hWin, IDC_LISTA, LB_GETCURSEL, 0, 0
+    			cmp eax, LB_ERR
+    			je salir_agregar
+
+    			mov ecx, eax ; guardar índice
+    			; Obtener texto de la línea seleccionada
+    			invoke SendDlgItemMessage, hWin, IDC_LISTA, LB_GETTEXT, ecx, addr bufferLinea
+
+    			; Extraer precio desde el texto " - Bs."
+   			 	mov esi, offset bufferLinea
+			buscar_bs:
+    			cmp byte ptr [esi], 0
+    			je salir_agregar
+    			cmp byte ptr [esi], 'B'
+    			jne siguiente
+    			cmp byte ptr [esi+1], 's'
+    			jne siguiente
+    			cmp byte ptr [esi+2], '.'
+    			jne siguiente
+    			add esi, 3 ; saltar "Bs."
+    			jmp extraer_precio
+			siguiente:
+    			inc esi
+    			jmp buscar_bs
+
+			extraer_precio:
+    			mov edi, offset bufferPrecio
+    			xor ecx, ecx
+			extraer_loop:
+    			mov al, [esi]
+    			cmp al, '0'
+    			jb terminar_precio
+    			cmp al, '9'
+    			ja terminar_precio
+    			mov [edi], al
+    			inc edi
+    			inc esi
+    			inc ecx
+    			jmp extraer_loop
+
+			terminar_precio:
+    			mov byte ptr [edi], 0
+
+    			; Convertir texto a número
+    			invoke atodw, addr bufferPrecio
+    			add totalPagar, eax
+
+    			; Mostrar total actualizado
+    			invoke dwtoa, totalPagar, addr bufferTotal
+    			invoke SetDlgItemText, hWin, IDC_TOTAL, addr bufferTotal
+
+    			; Agregar al carrito
+    			invoke SendDlgItemMessage, hWin, IDC_CARRITO, LB_ADDSTRING, 0, addr bufferLinea
+
+			salir_agregar:	
 		
 		.elseif ax == IDCANCEL
 			invoke EndDialog, hWin, 0
